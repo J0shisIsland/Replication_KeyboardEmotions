@@ -52,6 +52,7 @@ table(fulldata$context_knowledge_3) #3
 table(fulldata$context_knowledge_4) #3
 table(fulldata$context_knowledge_5) #1
 fulldata$context_knowledge_6_TEXT
+fulldata$context_associations
 
 fulldata$context_knowledge <- ifelse(fulldata$context_knowledge_5 %in% 1, 5, 
                                           ifelse(fulldata$context_knowledge_4 %in% 1, 4, 
@@ -164,36 +165,75 @@ format(ratings_corr$P, scientific=FALSE)
 #To-Do: remove outliers?
 
 ##Plots----
-#define nonmusicans and musicians by OMSI question
-data_long_clean$OMSImusician <- ifelse (data_long_clean$OMSI.1.question %in% c("1" : "2"), 1,
-                                        ifelse(data_long_clean$OMSI.1.question %in% c("3" : "6"), 2,
+#order the manipulation categories
+data_long_clean$manipulation_ordered <- factor(data_long_clean$manipulation , levels=c("orig", "fast", "maj", "min", "pedl"))
+
+#group nonmusicans and musicians by OMSI question
+data_long_clean$OMSImusician <- ifelse (data_long_clean$OMSI.1.question %in% c("1" : "2"), "Nonmusicians",
+                                        ifelse(data_long_clean$OMSI.1.question %in% c("3" : "6"), "Musicians",
                                                NA))
 table(data_long_clean$OMSImusician, data_long_clean$mus_instrument)
 
+#Crosstable Musicians vs. Nonmusicians
+data_long_clean %>%
+  group_by(OMSImusician, manipulation_ordered) %>%
+  dplyr::summarize(m_valence = mean(valence), sd_valence = sd(valence))
+
+data_long_clean %>%
+  group_by(ID) %>%
+  dplyr::summarize(m_arousal = mean(arousal), sd_arousal = sd(arousal)) %>%
+  print(n=51)
+
+data_long_clean %>%
+  group_by(OMSImusician, manipulation_ordered) %>%
+  dplyr::summarize(m_auth = mean(auth), sd_auth = sd(auth))
+
+#group knowledge of WTC1
+data_long_clean$grouped_knowledge <- ifelse(data_long_clean$context_knowledge %in% c("1":"2"), "average", 
+                                            ifelse(data_long_clean$context_knowledge %in% c("3":"5"), "high",
+                                                   NA))
+table(data_long_clean$grouped_knowledge)
+
+#Crosstable knowledge of WTC1
+data_long_clean %>%
+  group_by(grouped_knowledge, manipulation_ordered) %>%
+  dplyr::summarize(m_valence = mean(valence), sd_valence = sd(valence))
+
+data_long_clean %>%
+  group_by(grouped_knowledge, manipulation_ordered) %>%
+  dplyr::summarize(m_arousal = mean(arousal), sd_arousal = sd(arousal))
+
+data_long_clean %>%
+  group_by(grouped_knowledge, manipulation_ordered) %>%
+  dplyr::summarize(m_auth = mean(auth), sd_auth = sd(auth))
+
 #Valence barplots for 4 conditions
-valenceplot <- ggplot(data_long_clean, aes(x = manipulation, y = valence, fill = manipulation))+ 
+valenceplot <- ggplot(data_long_clean, aes(x = manipulation_ordered, y = valence, fill = manipulation))+ 
   geom_boxplot()+
   facet_grid(~OMSImusician)+
   scale_fill_brewer(palette = "Set1")+
   theme_classic()
-valenceplot
+valenceplot +
+  xlab("Manipulation") + ylab("Valence") 
 
 #Arousal barplots for 4 conditions
-arousalplot <- ggplot(data_long_clean, aes(x = manipulation, y = arousal, fill = manipulation))+
+arousalplot <- ggplot(data_long_clean, aes(x = manipulation_ordered, y = arousal, fill = manipulation))+
   geom_boxplot()+
   facet_grid(~OMSImusician)+
   scale_fill_brewer(palette = "Set2")+
   theme_classic()
-arousalplot
+arousalplot +
+  xlab("Manipulation") + ylab("Arousal") 
 
 #Authenticity barplots for 4 conditions
-authplot <- ggplot(data_long_clean, aes(x = manipulation, y = auth, fill = manipulation))+
+authplot <- ggplot(data_long_clean, aes(x = manipulation_ordered, y = auth, fill = manipulation))+
   geom_boxplot()+
+  facet_grid(~OMSImusician)+
   scale_fill_brewer(palette = "Set3")+
   theme_classic()
-authplot
+authplot +
+  xlab("Manipulation") + ylab("Authenticity")
 
-#To-Do: Make scatterplot of means of manipulations
 
 ##ANCOVA Analysis----
 data_long_clean$auth_centr <- data_long_clean$auth - mean(data_long_clean$auth)
